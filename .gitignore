@@ -1,0 +1,9 @@
+target/
+node_modules/
+.idea/
+.vscode/
+*.iml
+.direnv/
+.env
+.DS_Store
+docker/trino/plugin/

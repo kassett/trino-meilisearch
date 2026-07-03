@@ -1,0 +1,15 @@
+{
+  "name": "trino-meilisearch",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "changeset": "changeset",
+    "version": "changeset version && node scripts/sync-pom-version.mjs",
+    "release": "changeset tag"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.29.7"
+  }
+}

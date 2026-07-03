@@ -1,0 +1,59 @@
+name: Push
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
+
+      - name: Cache Nix
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/nix
+            ~/.cache/nix-eval-cache
+            ~/.local/state/nix
+          key: ${{ runner.os }}-nix-${{ hashFiles('flake.nix', 'flake.lock') }}
+
+      - name: Run integration tests
+        run: nix develop --command make integration-test
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports
+            target/failsafe-reports
+
+      - name: Upload Docker logs
+        if: failure()
+        run: docker compose logs > docker-compose.log || true
+
+      - name: Store Docker logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-compose-logs
+          path: docker-compose.log
+
+      - name: Stop Docker stack
+        if: always()
+        run: docker compose down -v --remove-orphans || true

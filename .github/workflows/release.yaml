@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Changesets release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Kassett PR Bot token
+        id: kassett-pr-bot
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: 4208672
+          private-key: ${{ secrets.KASSETT_PR_BOT_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.kassett-pr-bot.outputs.token }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
+
+      - name: Cache Nix
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/nix
+            ~/.cache/nix-eval-cache
+            ~/.local/state/nix
+          key: ${{ runner.os }}-nix-${{ hashFiles('flake.nix', 'flake.lock') }}
+
+      - name: Install Node dependencies
+        run: nix develop --command pnpm install --frozen-lockfile
+
+      - name: Create release PR or publish GitHub release
+        uses: changesets/action@v1
+        with:
+          github-token: ${{ steps.kassett-pr-bot.outputs.token }}
+          version: nix develop --command pnpm run version
+          publish: nix develop --command pnpm run release
+          createGithubReleases: true
+          commitMode: github-api
+        env:
+          GITHUB_TOKEN: ${{ steps.kassett-pr-bot.outputs.token }}
