@@ -47,5 +47,35 @@ jobs:
             nix develop --command pnpm changeset status --since=origin/main
           fi
 
-      - name: Run CI checks
+      - name: Run unit checks
         run: nix develop --command make ci
+
+      - name: Start Docker Compose stack
+        run: nix develop --command make compose-up-test
+
+      - name: Run integration tests
+        run: nix develop --command make integration-test-external
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports
+            target/failsafe-reports
+
+      - name: Upload Docker logs
+        if: failure()
+        run: docker compose logs > docker-compose.log || true
+
+      - name: Store Docker logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-compose-logs
+          path: docker-compose.log
+
+      - name: Stop Docker stack
+        if: always()
+        run: docker compose down -v --remove-orphans || true

@@ -1,7 +1,7 @@
 TRINO_VERSION ?= 482
 PLUGIN_DIR := target/meilisearch-plugin
 
-.PHONY: build test ci coverage compose-up compose-down seed smoke integration-test benchmark-search clean-plugin
+.PHONY: build test ci coverage compose-up compose-up-test compose-down seed smoke integration-test integration-test-external benchmark-search clean-plugin
 
 build:
 	mvn -q clean package
@@ -19,6 +19,10 @@ compose-up: build
 	docker compose up -d --force-recreate trino
 	./docker/bin/seed-meilisearch.sh
 
+compose-up-test: build
+	docker compose up -d --force-recreate trino
+	./docker/bin/seed-meilisearch.sh 4
+
 compose-down:
 	docker compose down -v
 
@@ -31,6 +35,9 @@ smoke:
 
 integration-test:
 	mvn -q verify
+
+integration-test-external:
+	MEILISEARCH_IT_EXTERNAL_STACK=true mvn -q verify
 
 benchmark-search: build
 	docker compose up -d --force-recreate trino

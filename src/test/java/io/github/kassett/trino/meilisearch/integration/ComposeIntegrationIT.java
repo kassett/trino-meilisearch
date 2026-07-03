@@ -20,14 +20,17 @@ import static org.assertj.core.api.Assertions.fail;
 final class ComposeIntegrationIT
 {
     private static final Duration COMMAND_TIMEOUT = Duration.ofMinutes(2);
+    private static final String EXTERNAL_STACK_ENV = "MEILISEARCH_IT_EXTERNAL_STACK";
 
     @BeforeAll
     static void startStack()
             throws Exception
     {
-        command(Duration.ofSeconds(30), "docker", "compose", "down", "-v");
-        command(COMMAND_TIMEOUT, "docker", "compose", "up", "-d");
-        command(Duration.ofSeconds(30), "./docker/bin/seed-meilisearch.sh", "4");
+        if (!externalStack()) {
+            command(Duration.ofSeconds(30), "docker", "compose", "down", "-v");
+            command(COMMAND_TIMEOUT, "docker", "compose", "up", "-d");
+            command(Duration.ofSeconds(30), "./docker/bin/seed-meilisearch.sh", "4");
+        }
         waitForTrino();
     }
 
@@ -35,7 +38,9 @@ final class ComposeIntegrationIT
     static void stopStack()
             throws Exception
     {
-        command(Duration.ofSeconds(30), "docker", "compose", "down", "-v");
+        if (!externalStack()) {
+            command(Duration.ofSeconds(30), "docker", "compose", "down", "-v");
+        }
     }
 
     @Test
@@ -108,6 +113,11 @@ final class ComposeIntegrationIT
             throws SQLException
     {
         return DriverManager.getConnection("jdbc:trino://localhost:18080", "test", null);
+    }
+
+    private static boolean externalStack()
+    {
+        return Boolean.parseBoolean(System.getenv().getOrDefault(EXTERNAL_STACK_ENV, "false"));
     }
 
     private static void assertRows(Connection connection, String sql, List<List<Object>> expected)

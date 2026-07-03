@@ -42,6 +42,7 @@ jobs:
         run: nix develop --command pnpm install --frozen-lockfile
 
       - name: Create release PR or publish GitHub release
+        id: changesets
         uses: changesets/action@v1
         with:
           github-token: ${{ steps.kassett-pr-bot.outputs.token }}
@@ -51,3 +52,33 @@ jobs:
           commitMode: github-api
         env:
           GITHUB_TOKEN: ${{ steps.kassett-pr-bot.outputs.token }}
+
+      - name: Build plugin zip
+        if: steps.changesets.outputs.published == 'true'
+        run: nix develop --command mvn -q -DskipTests package
+
+      - name: Prepare release assets
+        if: steps.changesets.outputs.published == 'true'
+        id: release-assets
+        run: |
+          version="$(nix develop --command node -p "require('./package.json').version")"
+          tag="trino-meilisearch@$version"
+          zip="target/trino-meilisearch-$version.zip"
+
+          test -f "$zip"
+          (cd "$(dirname "$zip")" && shasum -a 256 "$(basename "$zip")") > "$zip.sha256"
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+          echo "checksum=$zip.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release assets
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ steps.kassett-pr-bot.outputs.token }}
+        run: |
+          gh release upload \
+            "${{ steps.release-assets.outputs.tag }}" \
+            "${{ steps.release-assets.outputs.zip }}" \
+            "${{ steps.release-assets.outputs.checksum }}" \
+            --clobber
