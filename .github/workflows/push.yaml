@@ -1,0 +1,17 @@
+name: Push
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  acknowledged:
+    name: Push acknowledged
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm PR validation boundary
+        run: echo "Unit and integration tests run on pull_request."

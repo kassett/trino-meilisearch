@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "title": "The Matrix",
+    "overview": "A hacker discovers the truth about his reality.",
+    "release_year": 1999,
+    "rating": 8.7,
+    "genres": ["action", "science fiction"]
+  },
+  {
+    "id": 2,
+    "title": "Spirited Away",
+    "overview": "A child enters a world of spirits.",
+    "release_year": 2001,
+    "rating": 8.6,
+    "genres": ["animation", "fantasy"]
+  },
+  {
+    "id": 3,
+    "title": "Arrival",
+    "overview": "A linguist works to communicate with alien visitors.",
+    "release_year": 2016,
+    "rating": 7.9,
+    "genres": ["drama", "science fiction"]
+  },
+  {
+    "id": 4,
+    "title": "Mad Max: Fury Road",
+    "overview": "Survivors flee across a desert wasteland.",
+    "release_year": 2015,
+    "rating": 8.1,
+    "genres": ["action"]
+  }
+]

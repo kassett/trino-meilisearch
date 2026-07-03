@@ -1,0 +1,73 @@
+services:
+  meilisearch:
+    image: getmeili/meilisearch:v1.15
+    environment:
+      MEILI_MASTER_KEY: masterKey
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "7700:7700"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7700/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks:
+      - meilisearch
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: movies
+      POSTGRES_USER: trino
+      POSTGRES_PASSWORD: trino
+    ports:
+      - "15432:5432"
+    volumes:
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trino -d movies"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks:
+      - meilisearch
+
+  mysql:
+    image: mysql:9.2
+    environment:
+      MYSQL_DATABASE: movies
+      MYSQL_USER: trino
+      MYSQL_PASSWORD: trino
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "13306:3306"
+    volumes:
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+    networks:
+      - meilisearch
+
+  trino:
+    image: trinodb/trino:482
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    ports:
+      - "18080:8080"
+    volumes:
+      - ./docker/trino/catalog:/etc/trino/catalog:ro
+      - ./target/meilisearch-plugin:/usr/lib/trino/plugin/meilisearch:ro
+    networks:
+      - meilisearch
+
+networks:
+  meilisearch:
+    driver: bridge

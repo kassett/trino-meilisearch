@@ -1,0 +1,81 @@
+name: Pull Request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  checks:
+    name: Format, lint, test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
+
+      - name: Cache Nix
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/nix
+            ~/.cache/nix-eval-cache
+            ~/.local/state/nix
+          key: ${{ runner.os }}-nix-${{ hashFiles('flake.nix', 'flake.lock') }}
+
+      - name: Install Node dependencies
+        run: nix develop --command pnpm install --frozen-lockfile
+
+      - name: Check for changeset
+        run: |
+          if [[ "${{ github.head_ref }}" == changeset-release/* ]]; then
+            exit 0
+          fi
+
+          changed_files="$(git diff --name-only origin/main...HEAD)"
+          code_changes="$(printf '%s\n' "$changed_files" | grep -Ev '^(README\.md|CHANGELOG\.md|docs/|\.github/)' || true)"
+
+          if [[ -n "$code_changes" ]]; then
+            nix develop --command pnpm changeset status --since=origin/main
+          fi
+
+      - name: Run unit checks
+        run: nix develop --command make ci
+
+      - name: Start Docker Compose stack
+        run: nix develop --command make compose-up-test
+
+      - name: Run integration tests
+        run: nix develop --command make integration-test-external
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports
+            target/failsafe-reports
+
+      - name: Upload Docker logs
+        if: failure()
+        run: docker compose logs > docker-compose.log || true
+
+      - name: Store Docker logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-compose-logs
+          path: docker-compose.log
+
+      - name: Stop Docker stack
+        if: always()
+        run: docker compose down -v --remove-orphans || true
