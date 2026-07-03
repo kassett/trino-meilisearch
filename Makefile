@@ -1,7 +1,7 @@
 TRINO_VERSION ?= 482
 PLUGIN_DIR := target/meilisearch-plugin
 
-.PHONY: build test ci compose-up compose-down seed smoke integration-test benchmark-search clean-plugin
+.PHONY: build test ci coverage compose-up compose-down seed smoke integration-test benchmark-search clean-plugin
 
 build:
 	mvn -q clean package
@@ -10,6 +10,9 @@ test:
 	mvn test
 
 ci:
+	mvn -q verify -DskipITs
+
+coverage:
 	mvn -q verify -DskipITs
 
 compose-up: build
